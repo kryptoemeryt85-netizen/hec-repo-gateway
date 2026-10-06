@@ -244,8 +244,7 @@ def call(tool, a):
             raise ValueError('Full HEC regression accepts no arguments')
         # Literals are intentionally local: options, environment and request data
         # cannot replace the executable, arguments, cwd or timeout.
-        command = ('/homeassistant/HEC/share/build52_61_testenv/bin/pytest',
-                   '-q', 'hec_audit_offline')
+        command = ('/usr/local/bin/python', '-m', 'pytest', '-q', 'hec_audit_offline')
         cwd = '/homeassistant'
         audit('full_hec_started', command=command, cwd=cwd, timeout=300)
         result = {'command': list(command), 'cwd': cwd, 'timeout_seconds': 300,
@@ -253,7 +252,7 @@ def call(tool, a):
         try:
             proc = subprocess.run(command, cwd=cwd, shell=False,
                                   capture_output=True, timeout=300,
-                                  env={'PATH': '/usr/bin:/bin', 'HOME': '/data',
+                                  env={'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': '/data',
                                        'PYTHONDONTWRITEBYTECODE': '1',
                                        'GOODWE_WRITE': '0'})
             result.update(exit_code=proc.returncode,
