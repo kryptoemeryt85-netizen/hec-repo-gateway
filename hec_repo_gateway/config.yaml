@@ -1,5 +1,5 @@
 name: HEC Repo Gateway
-version: "0.2.2"
+version: "0.2.3"
 slug: hec_repo_gateway
 description: Restricted source inspection and isolated exact Git operations
 arch: [aarch64, amd64]
