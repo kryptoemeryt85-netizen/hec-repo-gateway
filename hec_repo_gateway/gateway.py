@@ -246,6 +246,10 @@ def call(tool, a):
         # cannot replace the executable, arguments, cwd or timeout.
         command = ('/usr/local/bin/python', '-m', 'pytest', '-q', 'hec_audit_offline')
         cwd = '/homeassistant'
+        # Historical HEC tests use this fixed scratch directory. It lives only
+        # in the gateway app data volume and does not invoke or depend on OpenCode.
+        regression_cache = DATA / 'v2' / 'cache' / 'opencode'
+        regression_cache.mkdir(parents=True, exist_ok=True, mode=0o700)
         audit('full_hec_started', command=command, cwd=cwd, timeout=300)
         result = {'command': list(command), 'cwd': cwd, 'timeout_seconds': 300,
                   'exit_code': None, 'passed': None, 'failed': None}
