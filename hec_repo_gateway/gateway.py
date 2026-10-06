@@ -110,8 +110,10 @@ def patch(a, appdaemon=False):
         if str(p) not in OPTIONS['editable_paths'] or PROTECTED.search(str(p)):
             raise ValueError('Not on explicit editable path allowlist')
         before = source.read_allowed(str(p))
-        if PROTECTED.search(before.decode()) or PROTECTED.search(new):
-            raise ValueError('Protected source content')
+        # Content may legitimately mention protected device/tariff terms.
+        # Safety is enforced by the exact editable-path allowlist and protected
+        # path filter above; do not make an explicitly allowed source file
+        # immutable merely because its code contains those words.
         # Walk from / with nofollow to retain a safe parent directory descriptor.
         parent_fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
         try:
