@@ -60,6 +60,12 @@ class Security(unittest.TestCase):
         with patch.object(g.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, b'763 passed in 2.00s\n', b'')) as run:
             self.assertEqual(g.call('run_full_hec_regression', {})['status'], 'PASS')
             run.assert_called_once_with(('/usr/local/bin/python', '-m', 'pytest', '-q', 'hec_audit_offline'), cwd='/homeassistant', shell=False, capture_output=True, timeout=300, env={'PATH':'/usr/local/bin:/usr/bin:/bin','HOME':'/data','PYTHONDONTWRITEBYTECODE':'1','GOODWE_WRITE':'0'})
+    def test_full_runner_creates_only_fixed_scratch_dir(self):
+        with patch.object(g.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, b'763 passed in 2.00s\n', b'')):
+            result = g.call('run_full_hec_regression', {})
+            self.assertEqual(result['status'], 'PASS')
+            self.assertTrue((g.DATA/'v2'/'cache'/'opencode').is_dir())
+
     def test_runner_override_denied(self):
         with patch.object(g.subprocess, 'run') as run:
             for key in ['command', 'args', 'cwd', 'timeout', 'shell', 'env']:
