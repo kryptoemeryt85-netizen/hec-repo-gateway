@@ -59,7 +59,7 @@ class Security(unittest.TestCase):
     def test_fixed_full_runner(self):
         with patch.object(g.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, b'763 passed in 2.00s\n', b'')) as run:
             self.assertEqual(g.call('run_full_hec_regression', {})['status'], 'PASS')
-            run.assert_called_once_with(('/homeassistant/HEC/share/build52_61_testenv/bin/pytest', '-q', 'hec_audit_offline'), cwd='/homeassistant', shell=False, capture_output=True, timeout=300, env={'PATH':'/usr/bin:/bin','HOME':'/data','PYTHONDONTWRITEBYTECODE':'1','GOODWE_WRITE':'0'})
+            run.assert_called_once_with(('/usr/local/bin/python', '-m', 'pytest', '-q', 'hec_audit_offline'), cwd='/homeassistant', shell=False, capture_output=True, timeout=300, env={'PATH':'/usr/local/bin:/usr/bin:/bin','HOME':'/data','PYTHONDONTWRITEBYTECODE':'1','GOODWE_WRITE':'0'})
     def test_runner_override_denied(self):
         with patch.object(g.subprocess, 'run') as run:
             for key in ['command', 'args', 'cwd', 'timeout', 'shell', 'env']:
