@@ -1,4 +1,4 @@
-"""Ingress-only constrained gateway. Never executes code from source mounts."""
+"""Ingress-only constrained gateway. Only executes the explicitly approved fixed offline regression runner."""
 import ast
 import hashlib
 import json
@@ -240,7 +240,47 @@ def call(tool, a):
                 raise ValueError('Fixture assertion failed')
         return {'status': 'PASS', 'suite': 'syntax and optional fixed fixture assertion', 'files': paths, 'executes_source': False}
     if tool == 'run_full_hec_regression':
-        return {'status': 'BLOCKED', 'reason': 'No verified full HEC regression suite has been supplied. Gateway self-tests are not HEC regression.'}
+        if a:
+            raise ValueError('Full HEC regression accepts no arguments')
+        # Literals are intentionally local: options, environment and request data
+        # cannot replace the executable, arguments, cwd or timeout.
+        command = ('/homeassistant/HEC/share/build52_61_testenv/bin/pytest',
+                   '-q', 'hec_audit_offline')
+        cwd = '/homeassistant'
+        audit('full_hec_started', command=command, cwd=cwd, timeout=300)
+        result = {'command': list(command), 'cwd': cwd, 'timeout_seconds': 300,
+                  'exit_code': None, 'passed': None, 'failed': None}
+        try:
+            proc = subprocess.run(command, cwd=cwd, shell=False,
+                                  capture_output=True, timeout=300,
+                                  env={'PATH': '/usr/bin:/bin', 'HOME': '/data',
+                                       'PYTHONDONTWRITEBYTECODE': '1',
+                                       'GOODWE_WRITE': '0'})
+            result.update(exit_code=proc.returncode,
+                          stdout=proc.stdout.decode(errors='replace'),
+                          stderr=proc.stderr.decode(errors='replace'))
+            # Only recognize the final anchored pytest summary, never arbitrary
+            # occurrences of counts in test output.
+            summary = re.search(r'^(?:=+ )?((?:\d+ [a-z]+(?:, )?)+) in \d+(?:\.\d+)?s(?: \(.*\))?(?: =+)?$',
+                                result['stdout'].strip().split('\n')[-1])
+            if summary:
+                counts = dict((name, int(n)) for n, name in
+                              re.findall(r'(\d+) ([a-z]+)', summary.group(1)))
+                result.update(passed=counts.get('passed', 0),
+                              failed=counts.get('failed', 0))
+            result['status'] = ('PASS' if proc.returncode == 0 and
+                                result['passed'] == 763 and result['failed'] == 0
+                                and summary and counts == {'passed': 763}
+                                else 'BLOCKED')
+        except subprocess.TimeoutExpired as exc:
+            result.update(status='BLOCKED', reason='Runner timed out',
+                          stdout=(exc.stdout or b'').decode(errors='replace'),
+                          stderr=(exc.stderr or b'').decode(errors='replace'))
+        except OSError as exc:
+            result.update(status='BLOCKED', reason='Runner could not start',
+                          stdout='', stderr=str(exc))
+        audit('full_hec_completed', **result)
+        return result
     if tool in ('git_diff', 'git_diff_check', 'git_stage_exact', 'git_commit_no_push'):
         root = workspace(a['session'])
         paths = exact(root, a['paths'])

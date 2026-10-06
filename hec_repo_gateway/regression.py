@@ -1,6 +1,8 @@
 """Fixed gateway regression. This is not the full HEC regression suite."""
 import tempfile
 import unittest
+from unittest.mock import patch
+import subprocess
 from pathlib import Path
 import gateway as g
 
@@ -54,8 +56,21 @@ class Security(unittest.TestCase):
         commit=g.call('git_commit_no_push',{**args,'message':'Fixture verified'})
         self.assertFalse(commit['pushed'])
         self.assertEqual(g.call('repo_status',{'session':f['session']})['status'],'?? manifest.json\n')
-    def test_full_hec_not_claimed(self):
-        self.assertEqual(g.call('run_full_hec_regression',{})['status'],'BLOCKED')
+    def test_fixed_full_runner(self):
+        with patch.object(g.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, b'763 passed in 2.00s\n', b'')) as run:
+            self.assertEqual(g.call('run_full_hec_regression', {})['status'], 'PASS')
+            run.assert_called_once_with(('/homeassistant/HEC/share/build52_61_testenv/bin/pytest', '-q', 'hec_audit_offline'), cwd='/homeassistant', shell=False, capture_output=True, timeout=300, env={'PATH':'/usr/bin:/bin','HOME':'/data','PYTHONDONTWRITEBYTECODE':'1','GOODWE_WRITE':'0'})
+    def test_runner_override_denied(self):
+        with patch.object(g.subprocess, 'run') as run:
+            for key in ['command', 'args', 'cwd', 'timeout', 'shell', 'env']:
+                with self.assertRaises(ValueError):
+                    g.call('run_full_hec_regression', {key:'evil'})
+            run.assert_not_called()
+    def test_runner_failures(self):
+        for outcome in [OSError('missing interpreter'), subprocess.TimeoutExpired('pytest',300,output=b'partial',stderr=b'timeout'), subprocess.CompletedProcess([],1,b'762 passed, 1 failed in 1.00s',b'error'), subprocess.CompletedProcess([],0,b'763 passed, 1 skipped in 1.00s',b'')]:
+            kwargs = {'side_effect':outcome} if isinstance(outcome, Exception) else {'return_value':outcome}
+            with patch.object(g.subprocess,'run',**kwargs):
+                self.assertEqual(g.call('run_full_hec_regression',{})['status'],'BLOCKED')
 
 if __name__ == '__main__':
     unittest.main()

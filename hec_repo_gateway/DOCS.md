@@ -22,8 +22,12 @@ body=<JSON object>)` through Ingress. Call ha_get_app to discover the actual slu
 - fixture_create: {}; creates a fresh fixture repository in /data/sessions.
 - run_focused_tests: {session, paths, expected_value?}; Python AST validation and
   fixed fixture assertion, never executes arbitrary source or tests from mounts.
-- run_full_hec_regression: {}; returns BLOCKED until a reviewed full HEC suite is
-  available. Gateway security tests do NOT constitute full HEC regression.
+- run_full_hec_regression: {}; rejects all arguments. Runs only
+  `/homeassistant/HEC/share/build52_61_testenv/bin/pytest -q hec_audit_offline`
+  with cwd `/homeassistant`, shell disabled and 300s timeout. Returns captured
+  stdout/stderr, exit_code and parsed final counts; PASS requires exactly
+  763 passed, zero failures and exit code 0. Start/end are audited.
+
 - git_diff/git_diff_check/git_stage_exact: {session, paths}.
 - git_commit_no_push: {session, paths, message}; exact staged set and clean
   matching worktree required. Git operates ONLY on isolated repositories.
